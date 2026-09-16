@@ -147,6 +147,18 @@
     g.generateTexture('cashBase', 20, 20);
     g.clear();
 
+    // ---- Cash stack (title-screen "CASH" callout — stacked gold coins) ----
+    for (let i = 0; i < 4; i++) {
+      g.fillStyle(0xd4a72c, 1);
+      g.fillEllipse(17, 30 - i * 6, 16, 8);
+      g.fillStyle(0xffe066, 1);
+      g.fillEllipse(17, 28 - i * 6, 16, 6);
+      g.lineStyle(1.5, 0xb8860b, 1);
+      g.strokeEllipse(17, 28 - i * 6, 16, 6);
+    }
+    g.generateTexture('cashStack', 34, 38);
+    g.clear();
+
     // ---- Token power-up (speed boost) ----
     g.fillStyle(0x2255dd, 1);
     g.fillCircle(11, 11, 10);
@@ -282,61 +294,55 @@
   };
 
   // =========================================================================
-  // MENU SCENE — title screen shown before gameplay starts
+  // MENU SCENE — title screen shown before gameplay starts (uses the actual
+  // reference artwork as a static background image)
   // =========================================================================
   function MenuScene() { Phaser.Scene.call(this, { key: 'MenuScene' }); }
   MenuScene.prototype = Object.create(Phaser.Scene.prototype);
   MenuScene.prototype.constructor = MenuScene;
 
+  MenuScene.prototype.preload = function () {
+    this.load.image('titleBg', 'cash-dash-title.jpg');
+  };
+
   MenuScene.prototype.create = function () {
     const scene = this;
 
-    this.bg = this.add.tileSprite(0, 0, GAME_W, GAME_H, 'bgroad').setOrigin(0, 0);
-    this.add.tileSprite(0, GROUND_Y, GAME_W, 50, 'ground').setOrigin(0, 0);
-    this.add.tileSprite(0, 0, GAME_W, 30, 'sky').setOrigin(0, 0);
+    this.add.image(GAME_W / 2, GAME_H / 2, 'titleBg').setDisplaySize(GAME_W, GAME_H);
 
-    this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.35);
+    // ---- Clickable hit-zones over the "START GAME" / "HIGHSCORE HISTORY" text ----
+    const startZone = this.add.zone(400, 328, 300, 68).setInteractive({ useHandCursor: true });
+    const highscoreZone = this.add.zone(400, 394, 300, 62).setInteractive({ useHandCursor: true });
 
-    this.add.text(GAME_W / 2, 130, 'CASH DASH', {
-      fontFamily: 'Courier New', fontSize: '56px', color: '#ffe066',
-      stroke: '#000000', strokeThickness: 8, fontStyle: 'bold'
-    }).setOrigin(0.5);
+    const highlight = this.add.rectangle(400, 328, 300, 68, 0xffffff, 0);
+    function setHover(zone, on) {
+      highlight.setPosition(zone.x, zone.y);
+      highlight.setSize(zone.width, zone.height);
+      highlight.setFillStyle(0xffffff, on ? 0.12 : 0);
+    }
 
-    this.add.text(GAME_W / 2, 185, 'Pedal. Collect. Survive the commute.', {
-      fontFamily: 'Courier New', fontSize: '16px', color: '#ffffff',
-      stroke: '#000000', strokeThickness: 3
-    }).setOrigin(0.5);
+    startZone.on('pointerover', function () { setHover(startZone, true); });
+    startZone.on('pointerout', function () { setHover(startZone, false); });
+    startZone.on('pointerdown', function () { scene.startGame(); });
 
-    const bikePreview = this.add.image(GAME_W / 2, 250, 'philip').setScale(2.2);
-    this.tweens.add({ targets: bikePreview, y: 240, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-
-    const btnBg = this.add.rectangle(GAME_W / 2, 330, 240, 60, 0x2f9e44, 1)
-      .setStrokeStyle(4, 0x1c6b2b)
-      .setInteractive({ useHandCursor: true });
-    const btnText = this.add.text(GAME_W / 2, 330, 'START GAME', {
-      fontFamily: 'Courier New', fontSize: '24px', color: '#ffffff', fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    btnBg.on('pointerover', function () { btnBg.setFillStyle(0x39b354); });
-    btnBg.on('pointerout', function () { btnBg.setFillStyle(0x2f9e44); });
-    btnBg.on('pointerdown', function () { scene.startGame(); });
-
-    this.add.text(GAME_W / 2, 390, 'SPACE / Tap to boost  |  Avoid Plants, Employees & the CEO!', {
-      fontFamily: 'Courier New', fontSize: '13px', color: '#dddddd'
-    }).setOrigin(0.5);
-
-    this.input.keyboard.once('keydown-SPACE', function () { scene.startGame(); });
-    this.input.keyboard.once('keydown-ENTER', function () { scene.startGame(); });
+    highscoreZone.on('pointerover', function () { setHover(highscoreZone, true); });
+    highscoreZone.on('pointerout', function () { setHover(highscoreZone, false); });
+    highscoreZone.on('pointerdown', function () {
+      if (scene.highscoreNote) return;
+      scene.highscoreNote = scene.add.text(GAME_W / 2, 95, 'No scores yet — go dash!', {
+        fontFamily: 'Courier New', fontSize: '13px', color: '#ffffff', fontStyle: 'bold',
+        stroke: '#000000', strokeThickness: 4
+      }).setOrigin(0.5).setDepth(50);
+      scene.time.delayedCall(1800, function () {
+        if (scene.highscoreNote) { scene.highscoreNote.destroy(); scene.highscoreNote = null; }
+      });
+    });
   };
 
   MenuScene.prototype.startGame = function () {
     if (this.started) return;
     this.started = true;
     this.scene.start('GameScene');
-  };
-
-  MenuScene.prototype.update = function (time, delta) {
-    this.bg.tilePositionX += delta * 0.02;
   };
 
   // =========================================================================
@@ -801,5 +807,3 @@
 </script>
 </body>
 </html>
-
-
