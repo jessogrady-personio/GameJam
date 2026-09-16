@@ -102,113 +102,129 @@
   BootScene.prototype = Object.create(Phaser.Scene.prototype);
   BootScene.prototype.constructor = BootScene;
 
+  // Draws Philip riding his bike onto a 72x64 canvas (both the resting and
+  // boosting/pedaling-hard frames share this, just with the legs swapped).
+  function drawPhilip(g, boosting) {
+    const wheelR = 13;
+    const rearX = 18, frontX = 54, wheelY = 50;
+
+    // ---- wheels ----
+    [rearX, frontX].forEach(function (cx) {
+      g.fillStyle(0x111111, 1);
+      g.fillCircle(cx, wheelY, wheelR);
+      g.lineStyle(2, 0x777777, 1);
+      g.strokeCircle(cx, wheelY, wheelR);
+      g.lineStyle(1.5, 0x999999, 0.9);
+      for (let k = 0; k < 4; k++) {
+        const a = (k * Math.PI) / 4;
+        g.lineBetween(
+          cx - Math.cos(a) * (wheelR - 2), wheelY - Math.sin(a) * (wheelR - 2),
+          cx + Math.cos(a) * (wheelR - 2), wheelY + Math.sin(a) * (wheelR - 2)
+        );
+      }
+      g.fillStyle(0xcccccc, 1);
+      g.fillCircle(cx, wheelY, 4);
+    });
+
+    // ---- frame (red diamond + fork) ----
+    const bb = { x: 34, y: 50 };      // bottom bracket
+    const seat = { x: 34, y: 26 };    // seat tube top
+    const head = { x: 56, y: 28 };    // head tube top
+    g.lineStyle(5, 0xc0272d, 1);
+    g.lineBetween(bb.x, bb.y, rearX, wheelY);     // chain stay
+    g.lineBetween(bb.x, bb.y, seat.x, seat.y);    // seat tube
+    g.lineBetween(seat.x, seat.y, head.x, head.y); // top tube
+    g.lineBetween(bb.x, bb.y, head.x, head.y);    // down tube
+    g.lineBetween(seat.x, seat.y, rearX, wheelY);  // seat stay
+    g.lineStyle(4, 0xc0272d, 1);
+    g.lineBetween(head.x, head.y, frontX, wheelY); // fork
+    g.fillStyle(0xc0272d, 1);
+    [bb, seat, head].forEach(function (p) { g.fillCircle(p.x, p.y, 2.6); });
+    // seat + handlebar
+    g.fillStyle(0x2b2320, 1);
+    g.fillRoundedRect(29, 21, 10, 5, 2);
+    g.lineStyle(4, 0x333333, 1);
+    g.lineBetween(head.x, head.y, 60, 20);
+    g.lineBetween(53, 19, 65, 22);
+
+    // ---- legs / pedals ----
+    // Kept between the wheels (x 33-50) rather than over the rear wheel, so
+    // the dark trouser color doesn't blend into the black tire behind it.
+    const nearThigh = boosting ? { x: 30, y: 30 } : { x: 41, y: 33 };
+    const nearShin = boosting ? { x: 38, y: 41 } : { x: 34, y: 44 };
+    const nearShoe = boosting ? { x: 40, y: 53 } : { x: 30, y: 53 };
+    g.fillStyle(0x2b2b33, 1);
+    g.fillRoundedRect(nearThigh.x, nearThigh.y, 9, 15, 3);
+    g.fillRoundedRect(nearShin.x, nearShin.y, 8, 15, 3);
+    g.fillStyle(0xb0814a, 1); // lighter tan shoe so it reads against the dark wheel
+    g.fillRoundedRect(nearShoe.x, nearShoe.y, 11, 6, 2);
+    g.fillStyle(0x4a3018, 1);
+    g.fillRect(nearShoe.x, nearShoe.y + 5, 11, 2);
+
+    // ---- torso (light blue button shirt) ----
+    g.fillStyle(0xb9d0dc, 1);
+    g.fillRoundedRect(42, 15, 18, 21, 5);
+    g.fillStyle(0x8fb0c2, 1);
+    g.fillRoundedRect(51, 15, 9, 7, 3);
+    g.fillStyle(0xdbe6ea, 1);
+    g.fillRoundedRect(44, 15, 4, 17, 2);
+    g.fillStyle(0x1f2d38, 1);
+    g.fillRoundedRect(42, 32, 10, 5, 2);
+
+    // ---- arm (sleeve + skin forearm to handlebar) ----
+    // Kept below the chin line (head bottom ~y18) so it doesn't merge into
+    // the face, and forward of the frame's top tube so it reads against it.
+    g.fillStyle(0xb9d0dc, 1);
+    g.fillCircle(55, 21, 5);
+    g.lineStyle(5, 0xf0c090, 1);
+    g.lineBetween(57, 24, 63, 22);
+    g.fillStyle(0xf0c090, 1);
+    g.fillCircle(63, 22, 3);
+
+    // ---- neck + head ----
+    g.fillStyle(0xf0c090, 1); // neck bridges torso to head
+    g.fillRoundedRect(57, 10, 7, 8, 2);
+    g.fillStyle(0x9aa0a6, 1); // hair
+    g.fillCircle(60, 7, 9);
+    g.fillStyle(0xf0c090, 1); // face
+    g.fillCircle(61, 10, 8);
+    g.fillStyle(0xb8bcc4, 1); // hair highlight
+    g.fillCircle(57, 4, 3.5);
+    g.fillStyle(0x9aa0a6, 1); // sideburn
+    g.fillRoundedRect(54, 8, 3, 5, 1);
+    g.fillStyle(0xf0c090, 1); // ear
+    g.fillCircle(55, 11, 2.2);
+    g.fillStyle(0xe0b080, 1); // subtle nose + jaw shading
+    g.fillRoundedRect(68, 9, 3, 3, 1);
+    g.fillRoundedRect(63, 15, 5, 2, 1);
+    g.fillStyle(0x2b2320, 1); // eye
+    g.fillCircle(67, 9, 1.2);
+    g.fillStyle(0x6b5030, 1); // eyebrow
+    g.fillRect(65, 6, 4, 1.3);
+    g.fillStyle(0xb5764a, 1); // mouth
+    g.fillRoundedRect(66, 13, 3, 1.5, 1);
+  }
+
   BootScene.prototype.create = function () {
     const g = this.add.graphics();
 
     // ---- Philip on Bicycle (normal / pedaling frame) ----
+    // Canvas is 72x64. Everything is kept within 0..width/0..height —
+    // generateTexture clips anything drawn at negative coordinates, which
+    // is why the old design (hair drawn above y=0) rendered as a broken sliver.
     g.clear();
-    g.fillStyle(0x111111, 1);
-    g.fillCircle(8, 19, 6);
-    g.fillCircle(24, 19, 6);
-    g.fillStyle(0x777777, 1);
-    g.strokeCircle(8, 19, 6);
-    g.strokeCircle(24, 19, 6);
-    g.fillStyle(0xcccccc, 1);
-    g.fillCircle(8, 19, 2);
-    g.fillCircle(24, 19, 2);
-    // bike frame (diamond)
-    g.lineStyle(3, 0xc0272d, 1);
-    g.beginPath();
-    g.moveTo(8, 19); g.lineTo(17, 9); g.lineTo(24, 19); g.lineTo(17, 9); g.lineTo(13, 19);
-    g.strokePath();
-    // seat post + handlebar
-    g.lineStyle(2, 0x333333, 1);
-    g.lineBetween(17, 9, 17, 5);
-    g.lineBetween(24, 19, 27, 8);
-    // pedals / legs (pedaling pose A) — dark trousers
-    g.fillStyle(0x2b2b33, 1);
-    g.fillRect(13, 15, 4, 8);
-    g.fillRect(19, 12, 4, 8);
-    // torso — light blue button shirt
-    g.fillStyle(0xb9d0dc, 1);
-    g.fillRect(12, 3, 10, 10);
-    // head + gray hair
-    g.fillStyle(0xf0c090, 1);
-    g.fillCircle(19, 1, 4);
-    g.fillStyle(0x9aa0a6, 1);
-    g.fillRect(15, -4, 8, 5);
-    g.fillStyle(0xb8bcc4, 1);
-    g.fillRect(15, -4, 3, 2);
-    g.fillStyle(0xf0c090, 1);
-    g.fillRect(15, 1, 2, 2);
-    g.fillStyle(0x2b2320, 1);
-    g.fillRect(21, 0, 1, 1);
-    g.fillStyle(0xb5764a, 1);
-    g.fillRect(20, 3, 2, 1);
-    g.fillStyle(0x8fb0c2, 1);
-    g.fillRect(16, 3, 4, 2);
-    g.fillStyle(0x1f2d38, 1);
-    g.fillRect(12, 11, 3, 2);
-    g.fillStyle(0xdbe6ea, 1);
-    g.fillRect(13, 4, 2, 6);
-    g.fillStyle(0x6b4a2b, 1);
-    g.fillRect(19, 21, 4, 2);
-    g.fillStyle(0x2b2320, 1);
-    g.fillRect(19, 23, 4, 1);
-    g.generateTexture('philip', 32, 26);
+    drawPhilip(g, false);
+    g.generateTexture('philip', 72, 64);
     g.clear();
 
     // ---- Philip boosting / pedaling hard (frame B + motion streaks) ----
-    g.fillStyle(0x111111, 1);
-    g.fillCircle(8, 19, 6);
-    g.fillCircle(24, 19, 6);
-    g.fillStyle(0x777777, 1);
-    g.strokeCircle(8, 19, 6);
-    g.strokeCircle(24, 19, 6);
-    g.fillStyle(0xcccccc, 1);
-    g.fillCircle(8, 19, 2);
-    g.fillCircle(24, 19, 2);
-    g.lineStyle(3, 0xc0272d, 1);
-    g.beginPath();
-    g.moveTo(8, 19); g.lineTo(17, 9); g.lineTo(24, 19); g.lineTo(17, 9); g.lineTo(13, 19);
-    g.strokePath();
-    g.lineStyle(2, 0x333333, 1);
-    g.lineBetween(17, 9, 17, 5);
-    g.lineBetween(24, 19, 27, 8);
-    // pedals / legs (pedaling pose B - reversed) — dark trousers
-    g.fillStyle(0x2b2b33, 1);
-    g.fillRect(19, 15, 4, 8);
-    g.fillRect(13, 11, 4, 8);
-    g.fillStyle(0xb9d0dc, 1);
-    g.fillRect(12, 3, 10, 10);
-    g.fillStyle(0xf0c090, 1);
-    g.fillCircle(19, 1, 4);
-    g.fillStyle(0x9aa0a6, 1);
-    g.fillRect(15, -4, 8, 5);
-    g.fillStyle(0xb8bcc4, 1);
-    g.fillRect(15, -4, 3, 2);
-    g.fillStyle(0xf0c090, 1);
-    g.fillRect(15, 1, 2, 2);
-    g.fillStyle(0x2b2320, 1);
-    g.fillRect(21, 0, 1, 1);
-    g.fillStyle(0xb5764a, 1);
-    g.fillRect(20, 3, 2, 1);
-    g.fillStyle(0x8fb0c2, 1);
-    g.fillRect(16, 3, 4, 2);
-    g.fillStyle(0x1f2d38, 1);
-    g.fillRect(12, 11, 3, 2);
-    g.fillStyle(0xdbe6ea, 1);
-    g.fillRect(13, 4, 2, 6);
-    g.fillStyle(0x6b4a2b, 1);
-    g.fillRect(19, 21, 4, 2);
-    g.fillStyle(0x2b2320, 1);
-    g.fillRect(19, 23, 4, 1);
+    drawPhilip(g, true);
     // speed motion streaks behind
-    g.lineStyle(2, 0xffffff, 0.85);
-    g.lineBetween(-6, 12, 4, 12);
-    g.lineBetween(-10, 18, 2, 18);
-    g.lineBetween(-6, 23, 4, 23);
-    g.generateTexture('philipBoost', 32, 26);
+    g.lineStyle(3, 0xffffff, 0.8);
+    g.lineBetween(-10, 30, 6, 30);
+    g.lineBetween(-16, 40, 2, 40);
+    g.lineBetween(-10, 50, 6, 50);
+    g.generateTexture('philipBoost', 72, 64);
     g.clear();
 
     // ---- Cash coin/dollar ----
@@ -615,9 +631,9 @@
     // ---- Player ----
     this.player = this.physics.add.sprite(120, 200, 'philip');
     this.player.setCollideWorldBounds(false);
-    this.player.body.setSize(26, 22);
-    this.player.body.setOffset(3, 2);
-    this.player.setDepth(10).setScale(1.8);
+    this.player.body.setSize(58, 50);
+    this.player.body.setOffset(7, 8);
+    this.player.setDepth(10).setScale(0.8);
     this.playerShadow = this.add.image(this.player.x, GROUND_Y - 8, 'bikeShadow')
       .setDepth(4).setAlpha(0.7).setScale(1.5, 1);
     this.flames = this.add.image(this.player.x - 18, this.player.y + 5, 'flames')
