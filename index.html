@@ -1,21 +1,805 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex, nofollow">
-  <meta name="googlebot" content="noindex, nofollow">
-  <title>Hello from Vercel</title>
-  <link rel="stylesheet" href="style.css?v=001">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cash Dash</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: #101018;
+    overflow: hidden;
+    height: 100%;
+    font-family: 'Courier New', monospace;
+  }
+  #game-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+  }
+  canvas {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    box-shadow: 0 0 0 4px #000, 0 0 30px rgba(0,255,150,0.3);
+  }
+</style>
 </head>
 <body>
-  <!-- Client/UI layer -->
-  <main class="wrapper">
-    <h1 id="message">Hello from Vercel HELLO</h1>
-    <button id="change-btn">Change</button>
-  </main>
+<div id="game-container"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.70.0/phaser.min.js"></script>
+<script>
+(function () {
+  "use strict";
 
-  <script src="app.js?v=001"></script>
+  const GAME_W = 800;
+  const GAME_H = 450;
+  const GROUND_Y = 400;
+  const CEIL_Y = 30;
+  const MAX_LIVES = 3;
+  const CEO_MIN_START_TIME = 120;   // seconds of active play before CEO can appear
+  const CEO_MIN_COOLDOWN = 30;      // seconds between CEO spawns
+
+  const config = {
+    type: Phaser.AUTO,
+    width: GAME_W,
+    height: GAME_H,
+    parent: 'game-container',
+    pixelArt: true,
+    backgroundColor: '#1a1a2e',
+    physics: {
+      default: 'arcade',
+      arcade: {
+        gravity: { y: 0 },
+        debug: false
+      }
+    },
+    scene: [BootScene, MenuScene, GameScene]
+  };
+
+  // =========================================================================
+  // BOOT SCENE — generates all procedural textures, no external image assets
+  // =========================================================================
+  function BootScene() { Phaser.Scene.call(this, { key: 'BootScene' }); }
+  BootScene.prototype = Object.create(Phaser.Scene.prototype);
+  BootScene.prototype.constructor = BootScene;
+
+  BootScene.prototype.create = function () {
+    const g = this.add.graphics();
+
+    // ---- Philip on Bicycle (normal / pedaling frame) ----
+    g.clear();
+    g.fillStyle(0x111111, 1);
+    g.fillCircle(8, 19, 6);
+    g.fillCircle(24, 19, 6);
+    g.fillStyle(0x777777, 1);
+    g.strokeCircle(8, 19, 6);
+    g.strokeCircle(24, 19, 6);
+    g.fillStyle(0xcccccc, 1);
+    g.fillCircle(8, 19, 2);
+    g.fillCircle(24, 19, 2);
+    // bike frame (diamond)
+    g.lineStyle(3, 0x2f9e44, 1);
+    g.beginPath();
+    g.moveTo(8, 19); g.lineTo(17, 9); g.lineTo(24, 19); g.lineTo(17, 9); g.lineTo(13, 19);
+    g.strokePath();
+    // seat post + handlebar
+    g.lineStyle(2, 0x333333, 1);
+    g.lineBetween(17, 9, 17, 5);
+    g.lineBetween(24, 19, 27, 8);
+    // pedals / legs (pedaling pose A)
+    g.fillStyle(0x2b4c7e, 1);
+    g.fillRect(13, 15, 4, 8);
+    g.fillRect(19, 12, 4, 8);
+    // torso
+    g.fillStyle(0x3b6ea5, 1);
+    g.fillRect(12, 3, 10, 10);
+    // head + helmet
+    g.fillStyle(0xf0c090, 1);
+    g.fillCircle(19, 1, 4);
+    g.fillStyle(0xd94e4e, 1);
+    g.fillRect(15, -4, 8, 5);
+    g.generateTexture('philip', 32, 26);
+    g.clear();
+
+    // ---- Philip boosting / pedaling hard (frame B + motion streaks) ----
+    g.fillStyle(0x111111, 1);
+    g.fillCircle(8, 19, 6);
+    g.fillCircle(24, 19, 6);
+    g.fillStyle(0x777777, 1);
+    g.strokeCircle(8, 19, 6);
+    g.strokeCircle(24, 19, 6);
+    g.fillStyle(0xcccccc, 1);
+    g.fillCircle(8, 19, 2);
+    g.fillCircle(24, 19, 2);
+    g.lineStyle(3, 0x2f9e44, 1);
+    g.beginPath();
+    g.moveTo(8, 19); g.lineTo(17, 9); g.lineTo(24, 19); g.lineTo(17, 9); g.lineTo(13, 19);
+    g.strokePath();
+    g.lineStyle(2, 0x333333, 1);
+    g.lineBetween(17, 9, 17, 5);
+    g.lineBetween(24, 19, 27, 8);
+    // pedals / legs (pedaling pose B - reversed)
+    g.fillStyle(0x2b4c7e, 1);
+    g.fillRect(19, 15, 4, 8);
+    g.fillRect(13, 11, 4, 8);
+    g.fillStyle(0x3b6ea5, 1);
+    g.fillRect(12, 3, 10, 10);
+    g.fillStyle(0xf0c090, 1);
+    g.fillCircle(19, 1, 4);
+    g.fillStyle(0xd94e4e, 1);
+    g.fillRect(15, -4, 8, 5);
+    // speed motion streaks behind
+    g.lineStyle(2, 0xffffff, 0.85);
+    g.lineBetween(-6, 12, 4, 12);
+    g.lineBetween(-10, 18, 2, 18);
+    g.lineBetween(-6, 23, 4, 23);
+    g.generateTexture('philipBoost', 32, 26);
+    g.clear();
+
+    // ---- Cash coin/dollar ----
+    g.fillStyle(0x1b8a3a, 1);
+    g.fillCircle(10, 10, 9);
+    g.lineStyle(2, 0xffffff, 1);
+    g.strokeCircle(10, 10, 9);
+    g.generateTexture('cashBase', 20, 20);
+    g.clear();
+
+    // ---- Token power-up (speed boost) ----
+    g.fillStyle(0x2255dd, 1);
+    g.fillCircle(11, 11, 10);
+    g.lineStyle(2, 0xaee4ff, 1);
+    g.strokeCircle(11, 11, 10);
+    g.fillStyle(0xffe066, 1);
+    g.fillTriangle(13, 3, 6, 13, 12, 13);
+    g.fillTriangle(9, 19, 16, 9, 10, 9);
+    g.generateTexture('token', 22, 22);
+    g.clear();
+
+    // ---- Plant obstacle (potted plant, road-level) ----
+    g.fillStyle(0x8a5a2b, 1);
+    g.fillRect(4, 20, 18, 10);
+    g.fillStyle(0x6f4620, 1);
+    g.fillRect(4, 20, 18, 3);
+    g.fillStyle(0x2f9e44, 1);
+    g.fillCircle(13, 14, 8);
+    g.fillCircle(6, 18, 6);
+    g.fillCircle(20, 18, 6);
+    g.fillStyle(0x39b354, 1);
+    g.fillCircle(13, 10, 5);
+    g.generateTexture('plant', 26, 30);
+    g.clear();
+
+    // ---- Employee (pedestrian) ----
+    g.fillStyle(0x2b2b2b, 1);
+    g.fillRect(9, 20, 4, 8);
+    g.fillRect(15, 20, 4, 8);
+    g.fillStyle(0x4a6fa5, 1);
+    g.fillRect(7, 8, 14, 13);
+    g.fillStyle(0xf0c090, 1);
+    g.fillCircle(14, 4, 5);
+    g.fillStyle(0x333333, 1);
+    g.fillRect(10, 0, 8, 3);
+    g.generateTexture('employee', 28, 30);
+    g.clear();
+
+    // ---- CEO (instant-kill hazard) — sports car with a suited boss ----
+    g.fillStyle(0x8a0f0f, 1);
+    g.fillRoundedRect(0, 14, 52, 16, 6);
+    g.fillStyle(0xc23c3c, 1);
+    g.fillRoundedRect(6, 6, 30, 14, 5);
+    g.fillStyle(0x1a1a1a, 1);
+    g.fillCircle(12, 30, 6);
+    g.fillCircle(40, 30, 6);
+    g.fillStyle(0x666666, 1);
+    g.fillCircle(12, 30, 2.5);
+    g.fillCircle(40, 30, 2.5);
+    // suited boss figure
+    g.fillStyle(0x1a1a1a, 1);
+    g.fillRect(16, 2, 12, 10);
+    g.fillStyle(0xf0c090, 1);
+    g.fillCircle(22, -2, 5);
+    g.fillStyle(0xcc1f1f, 1);
+    g.fillTriangle(20, 2, 24, 2, 22, 9);
+    g.generateTexture('ceo', 52, 34);
+    g.clear();
+
+    // ---- Heart icons (full / empty) for HUD ----
+    function drawHeart(color, outline) {
+      g.fillStyle(color, 1);
+      g.fillCircle(6, 6, 6);
+      g.fillCircle(14, 6, 6);
+      g.fillTriangle(0, 8, 20, 8, 10, 20);
+      g.lineStyle(1.5, outline, 1);
+      g.strokeCircle(6, 6, 6);
+      g.strokeCircle(14, 6, 6);
+    }
+    drawHeart(0xe0303f, 0x7a0f16);
+    g.generateTexture('heartFull', 20, 20);
+    g.clear();
+    drawHeart(0x33333f, 0x111118);
+    g.generateTexture('heartEmpty', 20, 20);
+    g.clear();
+
+    // ---- Ground tile (64x50) — asphalt road with lane markings ----
+    g.fillStyle(0x3a3a3f, 1);
+    g.fillRect(0, 0, 64, 50);
+    g.fillStyle(0x2e2e33, 1);
+    g.fillRect(0, 0, 64, 5);
+    // scattered asphalt speckle
+    g.fillStyle(0x454550, 1);
+    for (let i = 0; i < 10; i++) {
+      g.fillRect((i * 13) % 64, 10 + ((i * 7) % 30), 2, 2);
+    }
+    // dashed lane line through middle
+    g.fillStyle(0xffe066, 1);
+    g.fillRect(4, 22, 22, 4);
+    g.fillRect(40, 22, 22, 4);
+    g.generateTexture('ground', 64, 50);
+    g.clear();
+
+    // ---- Sky strip tile (64x30) — replaces old ceiling, soft clouds ----
+    g.fillStyle(0x4a7fc9, 1);
+    g.fillRect(0, 0, 64, 30);
+    g.fillStyle(0x6ea3e0, 1);
+    g.fillRect(0, 20, 64, 10);
+    g.fillStyle(0xffffff, 0.85);
+    g.fillEllipse(16, 12, 18, 8);
+    g.fillEllipse(48, 16, 20, 7);
+    g.generateTexture('sky', 64, 30);
+    g.clear();
+
+    // ---- Background roadside tile (64x450) — sky + distant hills/poles ----
+    g.fillStyle(0x5b8fd6, 1);
+    g.fillRect(0, 0, 64, 260);
+    g.fillStyle(0xffffff, 0.7);
+    g.fillEllipse(20, 60, 22, 9);
+    g.fillEllipse(46, 100, 18, 7);
+    g.fillStyle(0x4a8f5c, 1);
+    g.fillRect(0, 200, 64, 60);
+    g.fillStyle(0x3c7a4c, 1);
+    g.fillTriangle(0, 200, 20, 160, 40, 200);
+    g.fillTriangle(30, 200, 52, 150, 64, 200);
+    // utility pole
+    g.fillStyle(0x5a4a3a, 1);
+    g.fillRect(30, 60, 4, 200);
+    g.fillStyle(0x2a2a2a, 1);
+    g.fillRect(20, 68, 24, 3);
+    this.dummy = 0;
+    g.generateTexture('bgroad', 64, 450);
+    g.destroy();
+
+    // ---- Particle for pickup pop ----
+    const g2 = this.add.graphics();
+    g2.fillStyle(0xffe066, 1);
+    g2.fillCircle(4, 4, 4);
+    g2.generateTexture('spark', 8, 8);
+    g2.destroy();
+
+    this.scene.start('MenuScene');
+  };
+
+  // =========================================================================
+  // MENU SCENE — title screen shown before gameplay starts
+  // =========================================================================
+  function MenuScene() { Phaser.Scene.call(this, { key: 'MenuScene' }); }
+  MenuScene.prototype = Object.create(Phaser.Scene.prototype);
+  MenuScene.prototype.constructor = MenuScene;
+
+  MenuScene.prototype.create = function () {
+    const scene = this;
+
+    this.bg = this.add.tileSprite(0, 0, GAME_W, GAME_H, 'bgroad').setOrigin(0, 0);
+    this.add.tileSprite(0, GROUND_Y, GAME_W, 50, 'ground').setOrigin(0, 0);
+    this.add.tileSprite(0, 0, GAME_W, 30, 'sky').setOrigin(0, 0);
+
+    this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.35);
+
+    this.add.text(GAME_W / 2, 130, 'CASH DASH', {
+      fontFamily: 'Courier New', fontSize: '56px', color: '#ffe066',
+      stroke: '#000000', strokeThickness: 8, fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    this.add.text(GAME_W / 2, 185, 'Pedal. Collect. Survive the commute.', {
+      fontFamily: 'Courier New', fontSize: '16px', color: '#ffffff',
+      stroke: '#000000', strokeThickness: 3
+    }).setOrigin(0.5);
+
+    const bikePreview = this.add.image(GAME_W / 2, 250, 'philip').setScale(2.2);
+    this.tweens.add({ targets: bikePreview, y: 240, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+
+    const btnBg = this.add.rectangle(GAME_W / 2, 330, 240, 60, 0x2f9e44, 1)
+      .setStrokeStyle(4, 0x1c6b2b)
+      .setInteractive({ useHandCursor: true });
+    const btnText = this.add.text(GAME_W / 2, 330, 'START GAME', {
+      fontFamily: 'Courier New', fontSize: '24px', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    btnBg.on('pointerover', function () { btnBg.setFillStyle(0x39b354); });
+    btnBg.on('pointerout', function () { btnBg.setFillStyle(0x2f9e44); });
+    btnBg.on('pointerdown', function () { scene.startGame(); });
+
+    this.add.text(GAME_W / 2, 390, 'SPACE / Tap to boost  |  Avoid Plants, Employees & the CEO!', {
+      fontFamily: 'Courier New', fontSize: '13px', color: '#dddddd'
+    }).setOrigin(0.5);
+
+    this.input.keyboard.once('keydown-SPACE', function () { scene.startGame(); });
+    this.input.keyboard.once('keydown-ENTER', function () { scene.startGame(); });
+  };
+
+  MenuScene.prototype.startGame = function () {
+    if (this.started) return;
+    this.started = true;
+    this.scene.start('GameScene');
+  };
+
+  MenuScene.prototype.update = function (time, delta) {
+    this.bg.tilePositionX += delta * 0.02;
+  };
+
+  // =========================================================================
+  // GAME SCENE
+  // =========================================================================
+  function GameScene() { Phaser.Scene.call(this, { key: 'GameScene' }); }
+  GameScene.prototype = Object.create(Phaser.Scene.prototype);
+  GameScene.prototype.constructor = GameScene;
+
+  GameScene.prototype.create = function () {
+    const scene = this;
+
+    this.gameOver = false;
+    this.distance = 0;
+    this.cashCollected = 0;
+    this.lives = MAX_LIVES;
+    this.invincible = false;
+
+    this.baseScrollSpeed = 220;
+    this.scrollSpeed = this.baseScrollSpeed;
+    this.speedBoostActive = false;
+    this.speedBoostTimer = 0;
+    this.speedBoostMultiplier = 1.7;
+
+    this.elapsed = 0;
+    this.spawnTimerCash = 0;
+    this.spawnTimerToken = 0;
+    this.spawnTimerPlant = 0;
+    this.spawnTimerEmployee = 0;
+    this.nextCashDelay = 1200;
+    this.nextTokenDelay = 6000;
+    this.nextPlantDelay = 1800;
+    this.nextEmployeeDelay = 2600;
+    this.ceoNextSpawnTime = CEO_MIN_START_TIME;
+
+    // ---- Backgrounds (parallax road scene) ----
+    this.bg = this.add.tileSprite(0, 0, GAME_W, GAME_H, 'bgroad').setOrigin(0, 0);
+    this.skyTiles = this.add.tileSprite(0, 0, GAME_W, 30, 'sky').setOrigin(0, 0);
+    this.groundTiles = this.add.tileSprite(0, GROUND_Y, GAME_W, 50, 'ground').setOrigin(0, 0);
+
+    // ---- Player ----
+    this.player = this.physics.add.sprite(120, 200, 'philip');
+    this.player.setCollideWorldBounds(false);
+    this.player.body.setSize(26, 22);
+    this.player.body.setOffset(3, 2);
+    this.player.setDepth(10);
+    this.gravity = 900;
+    this.boostAccel = -2000;
+    this.playerVelY = 0;
+
+    // ---- Groups ----
+    this.cashGroup = this.physics.add.group();
+    this.tokenGroup = this.physics.add.group();
+    this.plantGroup = this.physics.add.group();
+    this.employeeGroup = this.physics.add.group();
+    this.ceoGroup = this.physics.add.group();
+
+    // ---- Input ----
+    this.isBoosting = false;
+    this.input.on('pointerdown', function () { scene.isBoosting = true; });
+    this.input.on('pointerup', function () { scene.isBoosting = false; });
+    this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+    // ---- UI ----
+    this.uiText = this.add.text(16, 12, '', {
+      fontFamily: 'Courier New', fontSize: '18px', color: '#ffffff',
+      stroke: '#000000', strokeThickness: 4
+    }).setDepth(100);
+
+    this.titleText = this.add.text(GAME_W - 16, 12, 'CASH DASH', {
+      fontFamily: 'Courier New', fontSize: '18px', color: '#ffe066',
+      stroke: '#000000', strokeThickness: 4
+    }).setOrigin(1, 0).setDepth(100);
+
+    // heart icons HUD (top-right, below title)
+    this.heartIcons = [];
+    for (let i = 0; i < MAX_LIVES; i++) {
+      const h = this.add.image(GAME_W - 16 - i * 26, 42, 'heartFull').setOrigin(1, 0).setDepth(100).setScale(1.1);
+      this.heartIcons.push(h);
+    }
+
+    this.boostIndicator = this.add.text(GAME_W / 2, 12, '', {
+      fontFamily: 'Courier New', fontSize: '16px', color: '#aee4ff',
+      stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5, 0).setDepth(100);
+
+    this.updateUI();
+    this.updateHearts();
+
+    // ---- Overlaps ----
+    this.physics.add.overlap(this.player, this.cashGroup, this.collectCash, null, this);
+    this.physics.add.overlap(this.player, this.tokenGroup, this.collectToken, null, this);
+    this.physics.add.overlap(this.player, this.plantGroup, this.hitPlant, null, this);
+    this.physics.add.overlap(this.player, this.employeeGroup, this.hitEmployee, null, this);
+    this.physics.add.overlap(this.player, this.ceoGroup, this.hitCEO, null, this);
+
+    // ---- Game Over UI (hidden initially) ----
+    this.gameOverContainer = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(200).setVisible(false);
+    const panelBg = this.add.rectangle(0, 0, 440, 240, 0x000000, 0.8).setStrokeStyle(3, 0xff4444);
+    const goTitle = this.add.text(0, -85, 'GAME OVER', {
+      fontFamily: 'Courier New', fontSize: '32px', color: '#ff4444', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    const goSummary = this.add.text(0, -25, '', {
+      fontFamily: 'Courier New', fontSize: '18px', color: '#ffffff', align: 'center'
+    }).setOrigin(0.5);
+    this.goSummaryText = goSummary;
+    const restartBtn = this.add.text(0, 70, '[ Press SPACE / Tap to Restart ]', {
+      fontFamily: 'Courier New', fontSize: '16px', color: '#ffe066'
+    }).setOrigin(0.5);
+    this.tweens.add({ targets: restartBtn, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
+    this.gameOverContainer.add([panelBg, goTitle, goSummary, restartBtn]);
+
+    this.spaceKey.on('down', function () {
+      if (scene.gameOver) scene.restartGame();
+    });
+    this.input.on('pointerdown', function () {
+      if (scene.gameOver) scene.restartGame();
+    });
+
+    this.floorY = GROUND_Y - 4;
+    this.ceilY = CEIL_Y;
+  };
+
+  GameScene.prototype.restartGame = function () {
+    this.scene.restart();
+  };
+
+  GameScene.prototype.updateUI = function () {
+    this.uiText.setText('Distance: ' + Math.floor(this.distance) + 'm    Cash Collected: $' + this.cashCollected);
+    this.boostIndicator.setText(this.speedBoostActive ? 'SPEED BOOST!' : '');
+  };
+
+  GameScene.prototype.updateHearts = function () {
+    for (let i = 0; i < this.heartIcons.length; i++) {
+      this.heartIcons[i].setTexture(i < this.lives ? 'heartFull' : 'heartEmpty');
+    }
+  };
+
+  // ---- Spawning ----
+  GameScene.prototype.spawnCashWave = function () {
+    const pattern = Phaser.Math.Between(0, 1);
+    const startX = GAME_W + 40;
+    const midY = Phaser.Math.Between(120, 300);
+
+    if (pattern === 0) {
+      const count = 8;
+      for (let i = 0; i < count; i++) {
+        const x = startX + i * 40;
+        const y = midY + Math.sin(i * 0.8) * 70;
+        this.spawnCash(x, y);
+      }
+    } else {
+      const cols = 4;
+      const rows = 2;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x = startX + c * 34;
+          const y = midY + r * 34;
+          this.spawnCash(x, y);
+        }
+      }
+    }
+  };
+
+  GameScene.prototype.spawnCash = function (x, y) {
+    y = Phaser.Math.Clamp(y, CEIL_Y + 20, GROUND_Y - 20);
+    const coin = this.cashGroup.create(x, y, 'cashBase');
+    coin.setDepth(5);
+    coin.body.setAllowGravity(false);
+    coin.body.setCircle(9);
+    coin.baseY = y;
+    coin.bobPhase = Math.random() * Math.PI * 2;
+    const dollarSign = this.add.text(x, y, '$', {
+      fontFamily: 'Courier New', fontSize: '14px', color: '#ffffff', fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(6);
+    coin.labelRef = dollarSign;
+  };
+
+  GameScene.prototype.spawnToken = function () {
+    const x = GAME_W + 40;
+    const y = Phaser.Math.Between(CEIL_Y + 30, GROUND_Y - 40);
+    const token = this.tokenGroup.create(x, y, 'token');
+    token.setDepth(5);
+    token.body.setAllowGravity(false);
+    token.body.setCircle(11);
+    token.baseY = y;
+    token.bobPhase = Math.random() * Math.PI * 2;
+  };
+
+  GameScene.prototype.spawnPlant = function () {
+    const x = GAME_W + 40;
+    const y = GROUND_Y - 18; // road-level obstacle
+    const plant = this.plantGroup.create(x, y, 'plant');
+    plant.setDepth(6);
+    plant.body.setAllowGravity(false);
+    plant.body.setSize(20, 22);
+  };
+
+  GameScene.prototype.spawnEmployee = function () {
+    const x = GAME_W + 40;
+    const y = GROUND_Y - 22; // standing on the road
+    const emp = this.employeeGroup.create(x, y, 'employee');
+    emp.setDepth(6);
+    emp.body.setAllowGravity(false);
+    emp.body.setSize(20, 26);
+  };
+
+  GameScene.prototype.spawnCEO = function () {
+    const x = GAME_W + 60;
+    const y = Phaser.Math.Between(CEIL_Y + 40, GROUND_Y - 40);
+    const ceo = this.ceoGroup.create(x, y, 'ceo');
+    ceo.setDepth(7);
+    ceo.body.setAllowGravity(false);
+    ceo.body.setSize(46, 28);
+  };
+
+  // ---- Collision / pickup handlers ----
+  GameScene.prototype.collectCash = function (player, coin) {
+    if (coin.labelRef) coin.labelRef.destroy();
+    const px = coin.x, py = coin.y;
+    this.cashCollected += 10;
+    this.updateUI();
+    this.spawnPickupSparks(px, py);
+    this.spawnPopup(px, py, '+$10', '#ffe066');
+    coin.destroy();
+  };
+
+  GameScene.prototype.collectToken = function (player, token) {
+    const px = token.x, py = token.y;
+    this.spawnPickupSparks(px, py, 0x2255dd);
+    this.spawnPopup(px, py, 'SPEED BOOST!', '#aee4ff');
+    this.speedBoostActive = true;
+    this.speedBoostTimer = 5000;
+    this.updateUI();
+    token.destroy();
+  };
+
+  GameScene.prototype.hitPlant = function (player, plant) {
+    if (this.gameOver || this.invincible) return;
+    plant.destroy();
+    this.damagePlayer();
+  };
+
+  GameScene.prototype.hitEmployee = function (player, emp) {
+    if (this.gameOver) return;
+    const px = emp.x, py = emp.y;
+    const penalty = Math.min(this.cashCollected, Math.max(10, Math.floor(this.cashCollected * 0.25)));
+    this.cashCollected -= penalty;
+    this.updateUI();
+    this.spawnPopup(px, py - 10, '-$' + penalty + ' Cash', '#ff5555');
+    emp.destroy();
+  };
+
+  GameScene.prototype.hitCEO = function (player, ceo) {
+    if (this.gameOver) return;
+    this.triggerGameOver('Fired by the CEO!');
+  };
+
+  GameScene.prototype.damagePlayer = function () {
+    this.lives -= 1;
+    this.updateHearts();
+    if (this.lives <= 0) {
+      this.triggerGameOver('Out of hearts!');
+      return;
+    }
+    this.invincible = true;
+    this.player.setTint(0xff8888);
+    const scene = this;
+    this.tweens.add({
+      targets: this.player,
+      alpha: 0.3,
+      duration: 100,
+      yoyo: true,
+      repeat: 8,
+      onComplete: function () {
+        scene.player.setAlpha(1);
+        scene.player.clearTint();
+        scene.invincible = false;
+      }
+    });
+  };
+
+  GameScene.prototype.triggerGameOver = function (reason) {
+    if (this.gameOver) return;
+    this.gameOver = true;
+    this.physics.pause();
+    this.player.setTint(0xff4444);
+
+    this.goSummaryText.setText(
+      (reason ? reason + '\n\n' : '') +
+      'Final Score\n\nDistance: ' + Math.floor(this.distance) + 'm\nCash Collected: $' + this.cashCollected
+    );
+    this.gameOverContainer.setVisible(true);
+  };
+
+  // ---- Visual helpers ----
+  GameScene.prototype.spawnPickupSparks = function (px, py, tint) {
+    for (let i = 0; i < 6; i++) {
+      const spark = this.add.image(px, py, 'spark').setDepth(20);
+      if (tint) spark.setTint(tint);
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const dist = Phaser.Math.FloatBetween(20, 50);
+      this.tweens.add({
+        targets: spark,
+        x: px + Math.cos(angle) * dist,
+        y: py + Math.sin(angle) * dist,
+        alpha: 0,
+        duration: 400,
+        onComplete: function () { spark.destroy(); }
+      });
+    }
+  };
+
+  GameScene.prototype.spawnPopup = function (px, py, msg, color) {
+    const popup = this.add.text(px, py, msg, {
+      fontFamily: 'Courier New', fontSize: '16px', color: color, fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 3
+    }).setOrigin(0.5).setDepth(20);
+    this.tweens.add({
+      targets: popup,
+      y: py - 40,
+      alpha: 0,
+      duration: 600,
+      onComplete: function () { popup.destroy(); }
+    });
+  };
+
+  // ---- Main loop ----
+  GameScene.prototype.update = function (time, delta) {
+    if (this.gameOver) return;
+
+    const dt = delta / 1000;
+    this.elapsed += dt;
+
+    // speed boost countdown
+    if (this.speedBoostActive) {
+      this.speedBoostTimer -= delta;
+      if (this.speedBoostTimer <= 0) {
+        this.speedBoostActive = false;
+        this.updateUI();
+      }
+    }
+
+    // difficulty ramp + temporary token boost
+    const rampedSpeed = this.baseScrollSpeed + Math.min(this.elapsed * 6, 260);
+    this.scrollSpeed = this.speedBoostActive ? rampedSpeed * this.speedBoostMultiplier : rampedSpeed;
+
+    // distance tracking
+    this.distance += (this.scrollSpeed * dt) / 12;
+    this.updateUI();
+
+    // background scroll (parallax layers)
+    this.bg.tilePositionX += this.scrollSpeed * dt * 0.4;
+    this.skyTiles.tilePositionX += this.scrollSpeed * dt * 0.2;
+    this.groundTiles.tilePositionX += this.scrollSpeed * dt;
+
+    // --- Player physics: pedal-boost (rise) vs gravity (fall) ---
+    this.isBoosting = this.isBoosting || this.spaceKey.isDown;
+    if (this.spaceKey.isDown === false && !this.input.activePointer.isDown) {
+      this.isBoosting = false;
+    }
+
+    if (this.isBoosting) {
+      this.playerVelY += this.boostAccel * dt;
+      this.player.setTexture('philipBoost');
+    } else {
+      this.playerVelY += this.gravity * dt;
+      this.player.setTexture('philip');
+    }
+    this.playerVelY = Phaser.Math.Clamp(this.playerVelY, -500, 600);
+
+    let newY = this.player.y + this.playerVelY * dt;
+    newY = Phaser.Math.Clamp(newY, this.ceilY + 12, this.floorY - 12);
+    if (newY === this.ceilY + 12 || newY === this.floorY - 12) {
+      this.playerVelY = 0;
+    }
+    this.player.y = newY;
+
+    this.player.rotation = Phaser.Math.Clamp(this.playerVelY / 1200, -0.3, 0.3);
+
+    // --- Move collectibles/obstacles leftward, cleanup off-screen ---
+    this.cashGroup.children.iterate((coin) => {
+      if (!coin) return;
+      coin.x -= this.scrollSpeed * dt;
+      coin.y = coin.baseY + Math.sin(this.elapsed * 3 + coin.bobPhase) * 6;
+      if (coin.labelRef) {
+        coin.labelRef.x = coin.x;
+        coin.labelRef.y = coin.y;
+      }
+      if (coin.x < -30) {
+        if (coin.labelRef) coin.labelRef.destroy();
+        coin.destroy();
+      }
+    });
+
+    this.tokenGroup.children.iterate((tok) => {
+      if (!tok) return;
+      tok.x -= this.scrollSpeed * dt;
+      tok.y = tok.baseY + Math.sin(this.elapsed * 3 + tok.bobPhase) * 8;
+      tok.rotation += dt * 2;
+      if (tok.x < -30) tok.destroy();
+    });
+
+    this.plantGroup.children.iterate((p) => {
+      if (!p) return;
+      p.x -= this.scrollSpeed * dt;
+      if (p.x < -40) p.destroy();
+    });
+
+    this.employeeGroup.children.iterate((e) => {
+      if (!e) return;
+      e.x -= this.scrollSpeed * dt;
+      if (e.x < -40) e.destroy();
+    });
+
+    this.ceoGroup.children.iterate((c) => {
+      if (!c) return;
+      c.x -= this.scrollSpeed * dt * 1.15;
+      if (c.x < -80) c.destroy();
+    });
+
+    // --- Spawning timers ---
+    this.spawnTimerCash += delta;
+    if (this.spawnTimerCash >= this.nextCashDelay) {
+      this.spawnTimerCash = 0;
+      this.nextCashDelay = Phaser.Math.Between(1400, 2400);
+      this.spawnCashWave();
+    }
+
+    this.spawnTimerToken += delta;
+    if (this.spawnTimerToken >= this.nextTokenDelay) {
+      this.spawnTimerToken = 0;
+      this.nextTokenDelay = Phaser.Math.Between(7000, 11000);
+      this.spawnToken();
+    }
+
+    this.spawnTimerPlant += delta;
+    if (this.spawnTimerPlant >= this.nextPlantDelay) {
+      this.spawnTimerPlant = 0;
+      this.nextPlantDelay = Phaser.Math.Between(1600, 2600) - Math.min(this.elapsed * 3, 500);
+      this.nextPlantDelay = Math.max(this.nextPlantDelay, 700);
+      this.spawnPlant();
+    }
+
+    this.spawnTimerEmployee += delta;
+    if (this.spawnTimerEmployee >= this.nextEmployeeDelay) {
+      this.spawnTimerEmployee = 0;
+      this.nextEmployeeDelay = Phaser.Math.Between(2200, 3400) - Math.min(this.elapsed * 3, 600);
+      this.nextEmployeeDelay = Math.max(this.nextEmployeeDelay, 900);
+      this.spawnEmployee();
+    }
+
+    // CEO: only after 2 minutes of active play, never more often than every 30s
+    if (this.elapsed >= this.ceoNextSpawnTime) {
+      this.spawnCEO();
+      this.ceoNextSpawnTime = this.elapsed + CEO_MIN_COOLDOWN + Phaser.Math.Between(0, 15);
+    }
+  };
+
+  new Phaser.Game(config);
+})();
+</script>
 </body>
 </html>
+
 
