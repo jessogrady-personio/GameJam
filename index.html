@@ -770,9 +770,18 @@
     token.bobPhase = Math.random() * Math.PI * 2;
   };
 
+  // Picks a vertical spawn band so ground obstacles also appear mid-air / near
+  // the ceiling, forcing the player to weave rather than just duck at ground level.
+  GameScene.prototype.pickObstacleY = function (groundLevelY) {
+    const band = Phaser.Math.Between(0, 2);
+    if (band === 0) return groundLevelY;
+    if (band === 1) return Phaser.Math.Between(180, 260);
+    return Phaser.Math.Between(CEIL_Y + 40, CEIL_Y + 75);
+  };
+
   GameScene.prototype.spawnPlant = function () {
     const x = GAME_W + 40;
-    const y = GROUND_Y - 18; // road-level obstacle
+    const y = this.pickObstacleY(GROUND_Y - 18);
     const plant = this.plantGroup.create(x, y, 'plant');
     plant.setDepth(6);
     plant.body.setAllowGravity(false);
@@ -781,7 +790,7 @@
 
   GameScene.prototype.spawnEmployee = function () {
     const x = GAME_W + 40;
-    const y = GROUND_Y - 22; // standing on the road
+    const y = this.pickObstacleY(GROUND_Y - 22);
     const emp = this.employeeGroup.create(x, y, 'employee');
     emp.setDepth(6);
     emp.body.setAllowGravity(false);
