@@ -471,6 +471,7 @@
 
   MenuScene.prototype.create = function () {
     const scene = this;
+    this.started = false;
 
     this.add.image(GAME_W / 2, GAME_H / 2, 'titleBg').setDisplaySize(GAME_W, GAME_H);
 
