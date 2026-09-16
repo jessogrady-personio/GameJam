@@ -43,6 +43,40 @@
   const CEO_MIN_COOLDOWN = 30;      // seconds between CEO spawns
   const OFFICE_TRANSITION_START = 420;
   const OFFICE_TRANSITION_LENGTH = 360;
+  const HIGHSCORE_KEY = 'cashDashHighscores';
+  const MAX_HIGHSCORES = 5;
+
+  // ---- Highscore persistence (Data Layer: localStorage) ----
+  function getHighscores() {
+    try {
+      const raw = localStorage.getItem(HIGHSCORE_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveHighscores(list) {
+    try {
+      localStorage.setItem(HIGHSCORE_KEY, JSON.stringify(list));
+    } catch (e) { /* localStorage unavailable — score just won't persist */ }
+  }
+
+  function qualifiesForHighscore(cash) {
+    const list = getHighscores();
+    if (list.length < MAX_HIGHSCORES) return true;
+    return cash > list[list.length - 1].cash;
+  }
+
+  function addHighscore(name, cash) {
+    const list = getHighscores();
+    list.push({ name: name, cash: cash });
+    list.sort(function (a, b) { return b.cash - a.cash; });
+    const trimmed = list.slice(0, MAX_HIGHSCORES);
+    saveHighscores(trimmed);
+    return trimmed;
+  }
 
   const config = {
     type: Phaser.AUTO,
@@ -457,16 +491,52 @@
 
     highscoreZone.on('pointerover', function () { setHover(highscoreZone, true); });
     highscoreZone.on('pointerout', function () { setHover(highscoreZone, false); });
-    highscoreZone.on('pointerdown', function () {
-      if (scene.highscoreNote) return;
-      scene.highscoreNote = scene.add.text(GAME_W / 2, 95, 'No scores yet — go dash!', {
-        fontFamily: 'Courier New', fontSize: '13px', color: '#ffffff', fontStyle: 'bold',
-        stroke: '#000000', strokeThickness: 4
-      }).setOrigin(0.5).setDepth(50);
-      scene.time.delayedCall(1800, function () {
-        if (scene.highscoreNote) { scene.highscoreNote.destroy(); scene.highscoreNote = null; }
-      });
-    });
+    highscoreZone.on('pointerdown', function () { scene.toggleHighscorePanel(); });
+  };
+
+  MenuScene.prototype.toggleHighscorePanel = function () {
+    if (this.highscorePanel) {
+      this.highscorePanel.destroy();
+      this.highscorePanel = null;
+      return;
+    }
+
+    const scene = this;
+    const scores = getHighscores();
+
+    const panel = this.add.container(GAME_W / 2, GAME_H / 2).setDepth(150);
+    const bg = this.add.rectangle(0, 0, 360, 300, 0x000000, 0.85).setStrokeStyle(3, 0xffe066);
+    const title = this.add.text(0, -125, 'HIGHSCORE HISTORY', {
+      fontFamily: 'Courier New', fontSize: '20px', color: '#ffe066', fontStyle: 'bold',
+      stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5);
+    panel.add([bg, title]);
+
+    if (scores.length === 0) {
+      const empty = this.add.text(0, 0, 'No scores yet — go dash!', {
+        fontFamily: 'Courier New', fontSize: '15px', color: '#ffffff'
+      }).setOrigin(0.5);
+      panel.add(empty);
+    } else {
+      for (let i = 0; i < scores.length; i++) {
+        const row = this.add.text(0, -75 + i * 34, (i + 1) + '.  ' + scores[i].name + '   $' + scores[i].cash, {
+          fontFamily: 'Courier New', fontSize: '17px', color: '#ffffff', fontStyle: 'bold',
+          stroke: '#000000', strokeThickness: 3
+        }).setOrigin(0.5);
+        panel.add(row);
+      }
+    }
+
+    const closeBtn = this.add.text(0, 125, '[ Click to close ]', {
+      fontFamily: 'Courier New', fontSize: '14px', color: '#aee4ff'
+    }).setOrigin(0.5);
+    panel.add(closeBtn);
+
+    const closeZone = this.add.zone(0, 0, 360, 300).setInteractive({ useHandCursor: true });
+    closeZone.on('pointerdown', function () { scene.toggleHighscorePanel(); });
+    panel.add(closeZone);
+
+    this.highscorePanel = panel;
   };
 
   MenuScene.prototype.startGame = function () {
@@ -604,13 +674,29 @@
       fontFamily: 'Courier New', fontSize: '16px', color: '#ffe066'
     }).setOrigin(0.5);
     this.tweens.add({ targets: restartBtn, alpha: 0.3, duration: 600, yoyo: true, repeat: -1 });
+    this.restartBtn = restartBtn;
     this.gameOverContainer.add([panelBg, goTitle, goSummary, restartBtn]);
 
+    // ---- Name entry UI (shown only when a new highscore is achieved) ----
+    const nameTitle = this.add.text(0, 40, 'NEW HIGH SCORE! Enter initials:', {
+      fontFamily: 'Courier New', fontSize: '15px', color: '#ffe066', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    const nameLetters = this.add.text(0, 70, '_ _ _', {
+      fontFamily: 'Courier New', fontSize: '26px', color: '#ffffff', fontStyle: 'bold',
+      letterSpacing: 4
+    }).setOrigin(0.5);
+    const nameHint = this.add.text(0, 100, '[ Type letters, ENTER to confirm ]', {
+      fontFamily: 'Courier New', fontSize: '12px', color: '#aee4ff'
+    }).setOrigin(0.5);
+    this.nameEntryLettersText = nameLetters;
+    this.nameEntryContainer = this.add.container(0, 0, [nameTitle, nameLetters, nameHint]).setVisible(false);
+    this.gameOverContainer.add(this.nameEntryContainer);
+
     this.spaceKey.on('down', function () {
-      if (scene.gameOver) scene.restartGame();
+      if (scene.gameOver && !scene.nameEntryActive) scene.restartGame();
     });
     this.input.on('pointerdown', function () {
-      if (scene.gameOver) scene.restartGame();
+      if (scene.gameOver && !scene.nameEntryActive) scene.restartGame();
     });
 
     this.floorY = GROUND_Y - 4;
@@ -823,6 +909,51 @@
       'Final Score\n\nDistance: ' + Math.floor(this.distance) + 'm\nCash Collected: $' + this.cashCollected
     );
     this.gameOverContainer.setVisible(true);
+
+    if (qualifiesForHighscore(this.cashCollected)) {
+      this.startNameEntry();
+    }
+  };
+
+  // ---- Highscore name entry (Logic/Middleware: keyboard-driven initials input) ----
+  GameScene.prototype.startNameEntry = function () {
+    const scene = this;
+    this.nameEntryActive = true;
+    this.enteredName = '';
+    this.restartBtn.setVisible(false);
+    this.nameEntryContainer.setVisible(true);
+    this.updateNameEntryText();
+
+    this.nameEntryHandler = function (event) {
+      if (!scene.nameEntryActive) return;
+      const key = event.key.toUpperCase();
+      if (key === 'BACKSPACE') {
+        scene.enteredName = scene.enteredName.slice(0, -1);
+        scene.updateNameEntryText();
+      } else if (key === 'ENTER') {
+        if (scene.enteredName.length === 3) scene.confirmNameEntry();
+      } else if (/^[A-Z]$/.test(key) && scene.enteredName.length < 3) {
+        scene.enteredName += key;
+        scene.updateNameEntryText();
+      }
+    };
+    this.input.keyboard.on('keydown', this.nameEntryHandler);
+  };
+
+  GameScene.prototype.updateNameEntryText = function () {
+    const chars = [];
+    for (let i = 0; i < 3; i++) {
+      chars.push(i < this.enteredName.length ? this.enteredName[i] : '_');
+    }
+    this.nameEntryLettersText.setText(chars.join(' '));
+  };
+
+  GameScene.prototype.confirmNameEntry = function () {
+    addHighscore(this.enteredName, this.cashCollected);
+    this.nameEntryActive = false;
+    this.input.keyboard.off('keydown', this.nameEntryHandler);
+    this.nameEntryContainer.setVisible(false);
+    this.restartBtn.setVisible(true);
   };
 
   // ---- Visual helpers ----
