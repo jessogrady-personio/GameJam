@@ -10,4 +10,4 @@ function applyRandomColor() {
 
 document.getElementById('change-btn').addEventListener('click', applyRandomColor);
 
-applyRandomColor();
+document.body.style.backgroundColor = 'orange';
