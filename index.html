@@ -41,6 +41,8 @@
   const MAX_LIVES = 3;
   const CEO_MIN_START_TIME = 120;   // seconds of active play before CEO can appear
   const CEO_MIN_COOLDOWN = 30;      // seconds between CEO spawns
+  const OFFICE_TRANSITION_START = 420;
+  const OFFICE_TRANSITION_LENGTH = 360;
 
   const config = {
     type: Phaser.AUTO,
@@ -101,6 +103,12 @@
     g.fillCircle(19, 1, 4);
     g.fillStyle(0xd94e4e, 1);
     g.fillRect(15, -4, 8, 5);
+    g.fillStyle(0x17263d, 1);
+    g.fillRect(12, 11, 3, 2);
+    g.fillStyle(0x75c8db, 1);
+    g.fillRect(13, 4, 2, 6);
+    g.fillStyle(0xf7f0d0, 1);
+    g.fillRect(19, 21, 4, 2);
     g.generateTexture('philip', 32, 26);
     g.clear();
 
@@ -131,6 +139,12 @@
     g.fillCircle(19, 1, 4);
     g.fillStyle(0xd94e4e, 1);
     g.fillRect(15, -4, 8, 5);
+    g.fillStyle(0x17263d, 1);
+    g.fillRect(12, 11, 3, 2);
+    g.fillStyle(0x75c8db, 1);
+    g.fillRect(13, 4, 2, 6);
+    g.fillStyle(0xf7f0d0, 1);
+    g.fillRect(19, 21, 4, 2);
     // speed motion streaks behind
     g.lineStyle(2, 0xffffff, 0.85);
     g.lineBetween(-6, 12, 4, 12);
@@ -159,15 +173,76 @@
     g.generateTexture('cashStack', 34, 38);
     g.clear();
 
-    // ---- Token power-up (speed boost) ----
-    g.fillStyle(0x2255dd, 1);
-    g.fillCircle(11, 11, 10);
-    g.lineStyle(2, 0xaee4ff, 1);
-    g.strokeCircle(11, 11, 10);
-    g.fillStyle(0xffe066, 1);
-    g.fillTriangle(13, 3, 6, 13, 12, 13);
-    g.fillTriangle(9, 19, 16, 9, 10, 9);
-    g.generateTexture('token', 22, 22);
+    // ---- Claude token power-up ----
+    g.fillStyle(0xd86b35, 1);
+    g.fillCircle(14, 14, 12);
+    g.fillStyle(0xf1a05d, 1);
+    g.fillCircle(14, 14, 8);
+    g.fillStyle(0xf8c184, 1);
+    g.fillRect(12, 3, 4, 3);
+    g.fillRect(3, 12, 4, 4);
+    g.fillRect(21, 12, 4, 4);
+    g.lineStyle(2, 0x642b20, 1);
+    g.strokeCircle(14, 14, 11);
+    g.lineStyle(2, 0x7b3724, 1);
+    g.lineBetween(9, 9, 19, 9);
+    g.lineBetween(9, 14, 19, 14);
+    g.lineBetween(9, 19, 19, 19);
+    g.generateTexture('token', 28, 28);
+    g.clear();
+
+    // ---- Floating Slack ping obstacle ----
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(2, 8, 38, 25, 5);
+    g.fillTriangle(10, 30, 7, 39, 18, 31);
+    g.lineStyle(2, 0x262334, 1);
+    g.strokeRoundedRect(2, 8, 38, 25, 5);
+    g.fillStyle(0xe01e5a, 1);
+    g.fillRect(9, 14, 5, 12);
+    g.fillStyle(0x36c5f0, 1);
+    g.fillRect(14, 14, 12, 5);
+    g.fillStyle(0x2eb67d, 1);
+    g.fillRect(26, 14, 5, 12);
+    g.fillStyle(0xecb22e, 1);
+    g.fillRect(14, 21, 12, 5);
+    g.generateTexture('slackPing', 42, 42);
+    g.clear();
+
+    // ---- Roof obstacle: a hanging office awning ----
+    g.fillStyle(0x262334, 1);
+    g.fillRect(0, 0, 64, 170);
+    g.fillStyle(0x4a3c52, 1);
+    g.fillRect(6, 12, 52, 145);
+    g.fillStyle(0x756070, 1);
+    g.fillRect(10, 20, 8, 127);
+    g.fillRect(28, 20, 8, 127);
+    g.fillRect(46, 20, 8, 127);
+    g.fillStyle(0xd3a84b, 1);
+    g.fillRect(0, 151, 64, 7);
+    g.fillRect(8, 160, 48, 4);
+    g.fillStyle(0xf1d27a, 1);
+    g.fillRect(8, 151, 10, 7);
+    g.fillRect(28, 151, 10, 7);
+    g.fillRect(48, 151, 10, 7);
+    g.fillStyle(0x171722, 1);
+    g.fillRect(0, 0, 64, 6);
+    g.generateTexture('ceilingBlock', 64, 170);
+    g.clear();
+
+    // ---- Boost flames ----
+    g.fillStyle(0xffd23f, 1);
+    g.fillTriangle(3, 13, 22, 13, 8, 25);
+    g.fillStyle(0xff7a27, 1);
+    g.fillTriangle(8, 10, 25, 13, 12, 23);
+    g.fillStyle(0xfff2a1, 1);
+    g.fillTriangle(12, 13, 21, 14, 14, 20);
+    g.generateTexture('flames', 28, 28);
+    g.clear();
+
+    // ---- Pixel shadow under the bike ----
+    g.fillStyle(0x10131c, 0.55);
+    g.fillEllipse(18, 5, 34, 9);
+    g.generateTexture('bikeShadow', 36, 10);
     g.clear();
 
     // ---- Plant obstacle (potted plant, road-level) ----
@@ -279,8 +354,63 @@
     g.fillRect(30, 60, 4, 200);
     g.fillStyle(0x2a2a2a, 1);
     g.fillRect(20, 68, 24, 3);
+    g.fillStyle(0x786253, 1);
+    g.fillRect(0, 260, 64, 140);
+    g.fillStyle(0x665144, 1);
+    g.fillRect(0, 260, 64, 6);
+    g.fillStyle(0x8e7660, 1);
+    g.fillRect(4, 286, 18, 3);
+    g.fillRect(39, 330, 19, 3);
+    g.fillStyle(0x4d4039, 1);
+    g.fillRect(27, 300, 5, 100);
+    g.fillStyle(0x9e8569, 1);
+    g.fillRect(8, 360, 12, 3);
+    g.fillRect(42, 376, 14, 3);
     this.dummy = 0;
     g.generateTexture('bgroad', 64, 450);
+    g.clear();
+
+    // ---- Background office tile — the commute reaches the workplace ----
+    g.fillStyle(0x7c91a2, 1);
+    g.fillRect(0, 0, 64, 450);
+    g.fillStyle(0x566b7b, 1);
+    g.fillRect(0, 188, 64, 212);
+    g.fillStyle(0xb7c3c9, 1);
+    g.fillRect(5, 40, 22, 38);
+    g.fillRect(37, 25, 22, 53);
+    g.fillStyle(0xf5d37a, 1);
+    g.fillRect(9, 45, 6, 9);
+    g.fillRect(18, 45, 6, 9);
+    g.fillRect(41, 31, 6, 10);
+    g.fillRect(50, 31, 6, 10);
+    g.fillStyle(0x3b4b56, 1);
+    g.fillRect(0, 78, 64, 5);
+    g.fillRect(30, 0, 5, 188);
+    g.fillStyle(0x90a9b5, 1);
+    g.fillRect(0, 185, 64, 8);
+    g.fillStyle(0x3b4650, 1);
+    g.fillRect(0, 193, 64, 5);
+    g.fillStyle(0x687b84, 1);
+    g.fillRect(0, 240, 64, 160);
+    g.fillStyle(0x8fa1a4, 1);
+    g.fillRect(0, 240, 64, 4);
+    g.fillStyle(0xc6d4d3, 1);
+    g.fillRect(7, 270, 15, 3);
+    g.fillRect(40, 315, 18, 3);
+    g.generateTexture('bgoffice', 64, 450);
+    g.clear();
+
+    // ---- Office sidewalk tile ----
+    g.fillStyle(0x687b84, 1);
+    g.fillRect(0, 0, 64, 50);
+    g.fillStyle(0x8fa1a4, 1);
+    g.fillRect(0, 0, 64, 5);
+    g.fillStyle(0x596a72, 1);
+    g.fillRect(0, 43, 64, 7);
+    g.fillStyle(0xa9b4b0, 1);
+    g.fillRect(4, 18, 22, 3);
+    g.fillRect(39, 34, 18, 3);
+    g.generateTexture('officeground', 64, 50);
     g.destroy();
 
     // ---- Particle for pickup pop ----
@@ -372,23 +502,31 @@
     this.spawnTimerToken = 0;
     this.spawnTimerPlant = 0;
     this.spawnTimerEmployee = 0;
+    this.spawnTimerCeiling = 0;
     this.nextCashDelay = 1200;
     this.nextTokenDelay = 6000;
     this.nextPlantDelay = 1800;
     this.nextEmployeeDelay = 2600;
+    this.nextCeilingDelay = 3600;
     this.ceoNextSpawnTime = CEO_MIN_START_TIME;
 
     // ---- Backgrounds (parallax road scene) ----
     this.bg = this.add.tileSprite(0, 0, GAME_W, GAME_H, 'bgroad').setOrigin(0, 0);
+    this.officeBg = this.add.tileSprite(0, 0, GAME_W, GAME_H, 'bgoffice').setOrigin(0, 0).setAlpha(0);
     this.skyTiles = this.add.tileSprite(0, 0, GAME_W, 30, 'sky').setOrigin(0, 0);
     this.groundTiles = this.add.tileSprite(0, GROUND_Y, GAME_W, 50, 'ground').setOrigin(0, 0);
+    this.officeGroundTiles = this.add.tileSprite(0, GROUND_Y, GAME_W, 50, 'officeground').setOrigin(0, 0).setAlpha(0);
 
     // ---- Player ----
     this.player = this.physics.add.sprite(120, 200, 'philip');
     this.player.setCollideWorldBounds(false);
     this.player.body.setSize(26, 22);
     this.player.body.setOffset(3, 2);
-    this.player.setDepth(10);
+    this.player.setDepth(10).setScale(1.8);
+    this.playerShadow = this.add.image(this.player.x, GROUND_Y - 8, 'bikeShadow')
+      .setDepth(4).setAlpha(0.7).setScale(1.5, 1);
+    this.flames = this.add.image(this.player.x - 18, this.player.y + 5, 'flames')
+      .setDepth(9).setVisible(false).setScale(1.2);
     this.gravity = 900;
     this.boostAccel = -2000;
     this.playerVelY = 0;
@@ -398,13 +536,13 @@
     this.tokenGroup = this.physics.add.group();
     this.plantGroup = this.physics.add.group();
     this.employeeGroup = this.physics.add.group();
+    this.slackGroup = this.physics.add.group();
+    this.ceilingGroup = this.physics.add.group();
     this.ceoGroup = this.physics.add.group();
 
     // ---- Input ----
-    this.isBoosting = false;
-    this.input.on('pointerdown', function () { scene.isBoosting = true; });
-    this.input.on('pointerup', function () { scene.isBoosting = false; });
     this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.spaceKey.reset();
 
     // ---- UI ----
     this.uiText = this.add.text(16, 12, '', {
@@ -429,6 +567,16 @@
       stroke: '#000000', strokeThickness: 4
     }).setOrigin(0.5, 0).setDepth(100);
 
+    this.statusText = this.add.text(GAME_W / 2, GAME_H - 34, '', {
+      fontFamily: 'Courier New', fontSize: '18px', color: '#ffd23f',
+      stroke: '#3c1711', strokeThickness: 5, fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(100);
+
+    this.districtText = this.add.text(GAME_W / 2, 45, 'OPEN ROAD', {
+      fontFamily: 'Courier New', fontSize: '12px', color: '#d7e9ed',
+      stroke: '#1b2a35', strokeThickness: 3, fontStyle: 'bold'
+    }).setOrigin(0.5).setDepth(100);
+
     this.updateUI();
     this.updateHearts();
 
@@ -437,6 +585,8 @@
     this.physics.add.overlap(this.player, this.tokenGroup, this.collectToken, null, this);
     this.physics.add.overlap(this.player, this.plantGroup, this.hitPlant, null, this);
     this.physics.add.overlap(this.player, this.employeeGroup, this.hitEmployee, null, this);
+    this.physics.add.overlap(this.player, this.slackGroup, this.hitSlackPing, null, this);
+    this.physics.add.overlap(this.player, this.ceilingGroup, this.stopAtCeiling, null, this);
     this.physics.add.overlap(this.player, this.ceoGroup, this.hitCEO, null, this);
 
     // ---- Game Over UI (hidden initially) ----
@@ -472,7 +622,7 @@
 
   GameScene.prototype.updateUI = function () {
     this.uiText.setText('Distance: ' + Math.floor(this.distance) + 'm    Cash Collected: $' + this.cashCollected);
-    this.boostIndicator.setText(this.speedBoostActive ? 'SPEED BOOST!' : '');
+    this.boostIndicator.setText(this.speedBoostActive ? 'CLAUDE BOOST!' : '');
   };
 
   GameScene.prototype.updateHearts = function () {
@@ -550,6 +700,24 @@
     emp.body.setSize(20, 26);
   };
 
+  GameScene.prototype.spawnSlackPing = function () {
+    const x = GAME_W + 40;
+    const y = Phaser.Math.Between(CEIL_Y + 55, GROUND_Y - 75);
+    const ping = this.slackGroup.create(x, y, 'slackPing');
+    ping.setDepth(8);
+    ping.body.setAllowGravity(false);
+    ping.body.setSize(34, 28).setOffset(4, 9);
+    ping.baseY = y;
+    ping.bobPhase = Math.random() * Math.PI * 2;
+  };
+
+  GameScene.prototype.spawnCeilingObstacle = function () {
+    const obstacle = this.ceilingGroup.create(GAME_W + 50, 80, 'ceilingBlock');
+    obstacle.setDepth(7);
+    obstacle.body.setAllowGravity(false);
+    obstacle.body.setSize(56, 164).setOffset(4, 3);
+  };
+
   GameScene.prototype.spawnCEO = function () {
     const x = GAME_W + 60;
     const y = Phaser.Math.Between(CEIL_Y + 40, GROUND_Y - 40);
@@ -572,8 +740,8 @@
 
   GameScene.prototype.collectToken = function (player, token) {
     const px = token.x, py = token.y;
-    this.spawnPickupSparks(px, py, 0x2255dd);
-    this.spawnPopup(px, py, 'SPEED BOOST!', '#aee4ff');
+    this.spawnPickupSparks(px, py, 0xf1a05d);
+    this.spawnPopup(px, py, 'CLAUDE BOOST!', '#f1a05d');
     this.speedBoostActive = true;
     this.speedBoostTimer = 5000;
     this.updateUI();
@@ -594,6 +762,24 @@
     this.updateUI();
     this.spawnPopup(px, py - 10, '-$' + penalty + ' Cash', '#ff5555');
     emp.destroy();
+  };
+
+  GameScene.prototype.hitSlackPing = function (player, ping) {
+    if (this.gameOver || this.invincible) return;
+    const px = ping.x, py = ping.y;
+    ping.destroy();
+    this.spawnPopup(px, py - 18, 'SLACK PING! -1 LIFE', '#ff6688');
+    this.damagePlayer();
+  };
+
+  GameScene.prototype.stopAtCeiling = function (player, obstacle) {
+    if (this.gameOver) return;
+    // The roof is a solid route blocker, not a damage hazard. Hold Philip below it.
+    const roofBottom = obstacle.y + 85;
+    if (player.y < roofBottom + 14) {
+      player.y = roofBottom + 14;
+      this.playerVelY = Math.max(this.playerVelY, 70);
+    }
   };
 
   GameScene.prototype.hitCEO = function (player, ceo) {
@@ -686,8 +872,8 @@
       }
     }
 
-    // difficulty ramp + temporary token boost
-    const rampedSpeed = this.baseScrollSpeed + Math.min(this.elapsed * 6, 260);
+    // Progressive commute acceleration + temporary Claude token boost.
+    const rampedSpeed = this.baseScrollSpeed + Math.min(this.elapsed * 10, 620);
     this.scrollSpeed = this.speedBoostActive ? rampedSpeed * this.speedBoostMultiplier : rampedSpeed;
 
     // distance tracking
@@ -700,10 +886,7 @@
     this.groundTiles.tilePositionX += this.scrollSpeed * dt;
 
     // --- Player physics: pedal-boost (rise) vs gravity (fall) ---
-    this.isBoosting = this.isBoosting || this.spaceKey.isDown;
-    if (this.spaceKey.isDown === false && !this.input.activePointer.isDown) {
-      this.isBoosting = false;
-    }
+    this.isBoosting = this.spaceKey.isDown || this.input.activePointer.isDown;
 
     if (this.isBoosting) {
       this.playerVelY += this.boostAccel * dt;
@@ -719,9 +902,22 @@
     if (newY === this.ceilY + 12 || newY === this.floorY - 12) {
       this.playerVelY = 0;
     }
+
+    // Roof sections are solid vertical blockers: stop upward travel beneath them.
+    this.ceilingGroup.children.iterate((obstacle) => {
+      if (!obstacle) return;
+      const horizontalHit = Math.abs(this.player.x - obstacle.x) < 58;
+      const roofBottom = obstacle.y + 85;
+      if (horizontalHit && newY < roofBottom + 14) {
+        newY = roofBottom + 14;
+        this.playerVelY = Math.max(this.playerVelY, 70);
+      }
+    });
     this.player.y = newY;
 
     this.player.rotation = Phaser.Math.Clamp(this.playerVelY / 1200, -0.3, 0.3);
+    this.playerShadow.setPosition(this.player.x, this.floorY + 4);
+    this.playerShadow.setScale(1.5 + Math.abs(this.playerVelY) / 1800, 1);
 
     // --- Move collectibles/obstacles leftward, cleanup off-screen ---
     this.cashGroup.children.iterate((coin) => {
@@ -744,6 +940,20 @@
       tok.y = tok.baseY + Math.sin(this.elapsed * 3 + tok.bobPhase) * 8;
       tok.rotation += dt * 2;
       if (tok.x < -30) tok.destroy();
+    });
+
+    this.slackGroup.children.iterate((ping) => {
+      if (!ping) return;
+      ping.x -= this.scrollSpeed * dt;
+      ping.y = ping.baseY + Math.sin(this.elapsed * 3 + ping.bobPhase) * 9;
+      ping.rotation = Math.sin(this.elapsed * 4 + ping.bobPhase) * 0.08;
+      if (ping.x < -50) ping.destroy();
+    });
+
+    this.ceilingGroup.children.iterate((obstacle) => {
+      if (!obstacle) return;
+      obstacle.x -= this.scrollSpeed * dt;
+      if (obstacle.x < -80) obstacle.destroy();
     });
 
     this.plantGroup.children.iterate((p) => {
@@ -782,7 +992,7 @@
     this.spawnTimerPlant += delta;
     if (this.spawnTimerPlant >= this.nextPlantDelay) {
       this.spawnTimerPlant = 0;
-      this.nextPlantDelay = Phaser.Math.Between(1600, 2600) - Math.min(this.elapsed * 3, 500);
+      this.nextPlantDelay = Phaser.Math.Between(1600, 2600) - Math.min(this.elapsed * 5, 900);
       this.nextPlantDelay = Math.max(this.nextPlantDelay, 700);
       this.spawnPlant();
     }
@@ -790,10 +1000,37 @@
     this.spawnTimerEmployee += delta;
     if (this.spawnTimerEmployee >= this.nextEmployeeDelay) {
       this.spawnTimerEmployee = 0;
-      this.nextEmployeeDelay = Phaser.Math.Between(2200, 3400) - Math.min(this.elapsed * 3, 600);
+      this.nextEmployeeDelay = Phaser.Math.Between(2200, 3400) - Math.min(this.elapsed * 5, 1100);
       this.nextEmployeeDelay = Math.max(this.nextEmployeeDelay, 900);
       this.spawnEmployee();
     }
+
+    this.spawnTimerSlack = (this.spawnTimerSlack || 0) + delta;
+    if (this.spawnTimerSlack >= (this.nextSlackDelay || 4600)) {
+      this.spawnTimerSlack = 0;
+      this.nextSlackDelay = Math.max(3000, Phaser.Math.Between(5200, 7800) - Math.floor(this.elapsed * 5));
+      this.spawnSlackPing();
+    }
+
+    this.spawnTimerCeiling += delta;
+    if (this.spawnTimerCeiling >= this.nextCeilingDelay) {
+      this.spawnTimerCeiling = 0;
+      this.nextCeilingDelay = Math.max(2700, Phaser.Math.Between(4300, 6500) - Math.floor(this.elapsed * 5));
+      this.spawnCeilingObstacle();
+    }
+
+    // The commute changes from open road to the office district.
+    const officeBlend = Phaser.Math.Clamp(
+      (this.distance - OFFICE_TRANSITION_START) / OFFICE_TRANSITION_LENGTH, 0, 1
+    );
+    this.officeBg.setAlpha(officeBlend);
+    this.officeGroundTiles.setAlpha(officeBlend);
+    this.bg.setAlpha(1 - officeBlend * 0.35);
+    this.flames.setPosition(this.player.x - 18, this.player.y + 5);
+    this.flames.setVisible(this.speedBoostActive);
+    this.flames.setScale(1 + Math.random() * 0.25, 1 + Math.random() * 0.15);
+    this.statusText.setText(this.speedBoostActive ? 'RE-ACCELERATE!' : '');
+    this.districtText.setText(officeBlend > 0.65 ? 'OFFICE DISTRICT' : 'OPEN ROAD');
 
     // CEO: only after 2 minutes of active play, never more often than every 30s
     if (this.elapsed >= this.ceoNextSpawnTime) {
