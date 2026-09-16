@@ -1,0 +1,35 @@
+/* Client/UI layer */
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  font-family: system-ui, sans-serif;
+}
+
+.wrapper {
+  text-align: center;
+}
+
+#message {
+  font-size: 3rem;
+  color: #ffffff;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+#change-btn {
+  margin-top: 1.5rem;
+  padding: 0.75rem 2rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 8px;
+  background: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+#change-btn:hover {
+  opacity: 0.9;
+}
